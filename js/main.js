@@ -13,7 +13,7 @@ $(document).ready(function() {
 		clearTimeout(timeout);
 		timeout = setTimeout(function() {
 			resizeHandle();
-		}, 100);
+		}, 50);
 	});
 
 	$(".navbar").localScroll();
