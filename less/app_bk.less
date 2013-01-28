@@ -1,0 +1,505 @@
+
+/* =============================================================================
+   App specific CSS file.
+   
+   This is usually where the site/app's CSS specific rules are setup. Note that you could
+   do exactly the same using less by adding a '@import app.less;' at the end of
+   less/bootstrap.less file.
+
+========================================================================== */
+
+@import "variables.less";
+@import "mixins.less";
+
+@mainColor: #f26522;
+
+body {
+	font-size: 16px;
+	min-height: 2000px; //for debug
+	background: #f9f9f9;
+}
+
+.touch {
+	#cover {
+		background-attachment: scroll;
+		&>div {
+			background-attachment: scroll!important;
+		}
+	}
+	#desc {
+		background-attachment: scroll;
+	}
+}
+#cover {
+	background: url(../img/mask_slant.png) 0 0 repeat,
+				url(../img/cover.jpg) 50% 0  no-repeat fixed;
+	.background-size(~"5px 5px, cover");
+	height: 814px;
+	overflow: hidden;
+	position: relative;
+
+	&>div {
+		width: 100%;
+		height: 100%;
+		position: absolute;
+		left: 0;
+		top: 0;
+	}
+	#cover-desc {
+		color: white;
+		z-index: 150;
+		top: auto;
+		bottom: 0;
+		height: 82px;
+		.background-size(contain);
+		width: 100%;
+		em {
+			font-style: normal;
+			display: block;
+			max-width: 580px;
+			font-size: 18px;
+			margin: 0 auto;
+			line-height: 26px;
+		}
+	}
+	#cover-txt {
+		background: url(../img/cover_txt.png) 50% 0 no-repeat fixed;
+		.background-size(auto 100%);
+		z-index: 140;
+	}
+	#cover-bk {
+		background: url(../img/cover_bk.png) 50% 0 no-repeat fixed;
+		.background-size(auto 100%);
+		z-index: 120;
+	}
+
+	#cover-bk1 {
+		background: url(../img/cover_bk1.png) 50% 0 no-repeat fixed;
+		.background-size(auto 100%);
+		z-index: 130;
+	}
+
+	#cover-bk2 {
+		background: url(../img/cover_bk2.png) 50% 0 no-repeat fixed;
+		.background-size(auto 100%);
+		z-index: 100;
+	}
+}
+#reg {
+	a {
+		color: white;
+		background: @mainColor;
+		.border-radius(4px);
+		text-shadow: none;
+	}
+}
+.clear {
+	clear: both;
+	float: none;
+}
+#menu {
+	height: 100px;
+	position: relative;
+	z-index: 999;
+	.affix {
+		background: rgba(255,255,255,0.95);
+		z-index: 999;
+	}
+}
+#whats {
+	margin: 0 0 32px 0;
+	p {
+		font-size: 14px;
+	}
+	.whats_img {
+		text-align: center;
+		margin-top: 64px;
+	}
+	.whats_present, .whats_judge {
+		padding: 12px;
+	}
+	h4 {
+		color: @mainColor;
+	}
+	.whats-judge {
+		a {
+			&:after {
+				content: "[+] "
+			}
+		}
+		a.active {
+			&:after {
+				content: "[-] "
+			}
+		}
+	}
+}
+#faqs {
+	display: none;
+	h4 {
+		color: white;
+		background: @mainColor;
+		padding: 6px 8px;
+		position: relative;
+		font-size: 16px;
+		font-weight: normal;
+		margin: 0 0 12px 32px;
+	}
+	.faq {
+		margin: 0 0 32px 0;
+		.faq_q {
+			position: relative;
+			&:before {
+				position: absolute;
+				content: "Q: ";
+				color: @mainColor;
+				font-size: 18px;
+				left: -25px;
+				width: 12px;
+				height: 18px;
+			}
+		}
+		.faq_a {
+			padding-left: 26px;
+			&:before {
+				content: "A: ";
+				font-size: 18px;
+				color: @mainColor;
+				margin-left: -16px;
+			}
+		}
+	}
+}
+#wheres {
+	background: url(../img/where_bg.jpg) 50% 0 no-repeat scroll;
+	.background-size(cover);
+	min-height: 668px;
+	.where-txt {
+		position: relative;
+		background: rgba(1,29,71,0.7);
+		padding: 32px;
+		color: white;
+		margin: 88px 0 0 0;
+		h2 {
+			color: white;
+		}
+	}
+	.where-date {
+		position: absolute;
+		padding: 0 4px;
+		top: 12px;
+		right: -12px;
+		height: 54px;
+		h4 {
+			margin: 0;
+			line-height: 54px;
+		}
+		background: @mainColor;
+		&:before {
+			content: "";
+			width: 26px;
+			height: 54px;
+			background: url(../img/where_flag.png) 0 0 no-repeat;
+			.background-size(52px 54px);
+			position: absolute;
+			left: -26px;
+			top: 0;
+		}
+		&:after {
+			content: "";
+			width: 26px;
+			height: 54px;
+			background: url(../img/where_flag.png) -26px 0 no-repeat;
+			.background-size(52px 54px);
+			position: absolute;
+			right: -26px;
+			top: 0;
+		}
+	}
+}
+#main-container {
+	position: relative;
+	z-index: 800;
+	section .container{
+		padding-top: 100px;
+	}
+}
+#schedule {
+	background: url(../img/wall_bg.jpg) 0 0 repeat fixed;
+	.background-size(50px 50px);
+	padding-bottom: 32px;
+	color: white;
+	h1 {
+		color: white;
+	}
+	.schedule-block {
+		position: relative;
+		padding: 6px 12px;
+	}
+	h4 {
+		display: inline;
+	}
+	.flag {
+		display: inline;
+		padding: 3px;
+		font-size: 13px;
+		background: white;
+		color: @mainColor;
+		margin: 6px;
+	}
+}
+#organizers {
+	padding-bottom: 32px;
+	position: relative;
+	.orgs {
+		max-width: 270px;
+		margin: 0 auto 32px auto;
+		position: relative;
+		.orgs-pic {
+				position: relative;
+				margin: 0 auto 12px;
+				max-width: 270px;
+				z-index: 1;
+			}
+			span {
+				text-align: center;
+				display: inline-block;
+				bottom: 26px;
+				font-size: 13px;
+				left: 26px;
+				word-spacing: nowrap;
+				background: @mainColor;
+				height: 32px;
+				line-height: 32px;
+				font-weight: bold;
+				color: white;
+				position: absolute;
+				z-index: 3;
+				&:after {
+					position: absolute;
+					right: -32px;
+					top: 0;
+					content: "";
+					border: 32px solid @mainColor;
+					border-bottom-color: transparent;
+					border-left-color: transparent;
+					border-right-color: transparent;
+					z-index: -1;
+				}
+				&:before {
+					position: absolute;
+					left: -32px;
+					top: -32px;
+					content: "";
+					border: 32px solid @mainColor;
+					border-top-color: transparent;
+					border-left-color: transparent;
+					border-right-color: transparent;
+					z-index: -1;
+				}
+			}
+	}
+}
+footer {
+	min-height: 80px;
+	background: #666;
+	padding-top: 32px;
+	#share {
+		padding: 20px 0 0 50px;
+		float: left;
+		div {
+			float: left;
+		}
+	}
+	.brand {
+		display: block;
+		float: left;
+		background: url(../img/footer_logo.png) 0 0 no-repeat;
+		.background-size(contain);
+		padding: 0;
+		margin: 0 0 0 28px;
+		height: 50px;
+		overflow: hidden;
+	}
+}
+p {
+	line-height: 24px;
+	margin-bottom: 24px;
+}
+h1 {
+	color: @mainColor;
+	font-size: 46px;
+	font-weight: normal;
+	margin: 0 0 32px 0;
+}
+h2 {
+	font-size: 22px;
+	font-weight: normal;
+	margin: 0;
+	color: #666;
+
+}
+.navbar .nav > .active > a,
+.navbar .nav > .active > a:hover,
+.navbar .nav > .active > a:focus {
+	color: @mainColor;
+	background: none;
+	.box-shadow(none);
+}
+#desc {
+	background:	url(../img/cover2.jpg) 100% 0 no-repeat fixed;
+	.background-size(cover);
+	padding: 64px 0;
+	margin-top: -28px;
+	.desc-inner {
+		padding: 32px;
+		background: rgba(1,29,71,0.8);
+		color: white;
+		margin-bottom: 12px;
+	}
+}
+nav {
+	width: 100%;
+	height: 100px;
+	background: #fff;
+	position: relative;
+	top: 0;
+	left: 0;
+	padding: 6px 0 0 0;
+	z-index: 999;
+	.navbar {
+		margin-top: 22px;
+		.navbar-inner {
+			padding: 0;
+			margin: 0;
+			border: none;
+			outline: none;
+			.box-shadow(none);
+			background: none;
+		}
+		.nav {
+			float: right;
+			li {
+				a {
+					text-transform: upper;
+					font-size: 16px;
+					font-weight: bold;
+				}
+			}
+		}
+		.brand {
+			background: url(../img/logo.png) 0 0 no-repeat;
+			.background-size(158px 50px);
+			padding: 0;
+			margin: 0 0 0 28px;
+			height: 50px;
+			overflow: hidden;
+		}
+	}
+	&:after {
+		content: "";
+		width: 100%;
+		height: 30px;
+		background: url(../img/nav_bg.png) 50% 100% no-repeat;
+		position: absolute;
+		bottom: -30px;
+	}
+}
+@media (min-width: 768px) and (max-width: 979px) {
+	nav {
+		.navbar {
+			.nav {
+				li {
+					a {
+						font-size: 14px;
+					}
+				}
+			}
+		}
+	}
+}
+@media (max-width: 980px) {
+	#schedule {
+		h4 {
+			display: block;
+		}
+		.flag {
+			display: block;
+			margin: 0 0 6px 0;
+		}
+	}
+	nav {
+		height: auto;
+		padding: 12px 0;
+		.navbar {
+			margin: 0;
+			.nav {
+				float: none;
+				margin: 0 12px;
+			}
+		}
+	}
+}
+@media (max-width: 767px) {
+	body {
+		padding-left: 0;
+		padding-right: 0;
+	}
+	h1 {
+		font-size: 32px;
+	}
+	h2 {
+		font-size: 18px;
+	}
+	nav {
+		.navbar {
+			.nav {
+				li {
+					a {
+						font-size: 13px;
+					}
+				}
+			}
+		}
+	}
+	#main-container {
+		&>section {
+			padding-left: 20px;
+			padding-right: 20px;
+			padding-bottom: 52px;
+			.container {
+				padding-top: 26px;
+			}
+		}
+	}
+	#whats {
+		.whats_img {
+			display: none;
+		}
+	}
+	#wheres {
+		.where-date {
+			display: none;
+		}
+	}
+	footer {
+		display: none;
+	}
+}
+@media (max-width: 640px) {
+	#cover {
+		display: none;
+	}
+}
+@media only screen and (-moz-min-device-pixel-ratio: 2),
+       only screen and (-o-min-device-pixel-ratio: 2/1),
+       only screen and (-webkit-min-device-pixel-ratio: 2),
+       only screen and (min-device-pixel-ratio: 2) {
+ 	nav {
+ 		.navbar {
+ 			.brand {
+ 				background-image: url(../img/logo@2x.png);
+ 			}
+ 		}
+ 	}      	
+}

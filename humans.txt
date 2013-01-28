@@ -1,0 +1,15 @@
+# humanstxt.org/
+# The humans responsible & technology colophon
+
+# TEAM
+	Creator/Designer: Joseph Cheng
+	Site: http://www.barcamp.hk
+	Twitter: @indiejoseph
+	Location: Fotan(Carbon Valley), Hong Kong
+
+# THANKS
+
+# TECHNOLOGY COLOPHON
+
+    HTML5, CSS3
+    Normalize.css, jQuery, Modernizr, Bootstrap
