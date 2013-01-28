@@ -34,8 +34,6 @@ function scrollHandle() {
 	if(scrollTop < windowHeight) {
 		$("#cover-txt").css("background-position", "50% -" + Math.round(scrollTop / 1.3) + "px");
 		//.css("transform", "scale(" + ((100 - (scrollTop/12)) * 0.01) + ")").css("opacity", (100 - (scrollTop/4)) * 0.01);
-		$("#cover-bk").css("background-position", "50% -" + Math.round(scrollTop / 4) + "px");
-		//.css("transform", "scale(" + ((100 - (scrollTop/16)) * 0.01) + ")").css("opacity", (100 - (scrollTop/4)) * 0.01);
 		$("#cover-bk1").css("background-position", "50% -" + Math.round(scrollTop / 2) + "px");
 		$("#cover-bk2").css("background-position", "50% -" + Math.round(scrollTop / 5) + "px");
 		$("#cover").css("background-position", "50% -" + Math.round(scrollTop / 12) + "px");
