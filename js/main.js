@@ -1,14 +1,21 @@
 var timeout, windowHeight, descTop, descHeight, whereTop, whereHeight;
-var where_bg_size = 1.1377;
-var desc_bg_size = 1.535;
 
 $(document).ready(function() {
+
+	// The floating menu only show on desktop browsers
 	if(!$(".touch").length) {
 		$(window).scroll(scrollHandle);
 		scrollHandle();
 		$('#follow').tooltip({selector: "a"});
 	}
 
+	// Navbar scroll
+	$(".navbar").localScroll();
+	$(".nav a").click(function() {
+		$(".collapse").collapse("toggle");
+	});
+
+	// Resize handle
 	$(window).resize(function() {
 		clearTimeout(timeout);
 		timeout = setTimeout(function() {
@@ -16,12 +23,25 @@ $(document).ready(function() {
 		}, 50);
 	});
 
-	$(".navbar").localScroll();
-	$(".nav a").click(function() {
-		$(".collapse").collapse("toggle");
-	});
-
 	resizeHandle();
+
+	//announcement
+	try { localStorage.clear(); } catch(e) { console.log(e); }
+
+	getFeed(function(result) {
+		var modal = $("#announce-modal");
+		var list = $(".list", modal);
+
+		for(var i = 0; i < result.length; i++) {
+			if(result[i][0] == " ") {
+				continue;
+			}
+			var parser = new BBCodeParser();
+			var body = parser.format(result[i]);
+			body = (body.length)?body.replace(/\r\n|\r|\n/g, "<br/>"): "";
+			list.append("<li>" + body + "</li>");
+		}
+	});
 });
 
 function scrollHandle() {
@@ -91,4 +111,19 @@ function showFaqs(elm) {
 		});
 		$(elm).addClass("active");
 	}
+}
+
+function getFeed(callback) {
+	var lang = getLang();
+	var gid = (lang == "zh-hk")?"od6":"od7";
+	var feed_url = "https://spreadsheets.google.com/pub?key=0Ar2uZbSZzSlqdF9GVjlPdEx2UUpBX3VQYUxXZE5feXc&hl=en&output=html&gid=" + gid;
+	var googleSpreadsheet = new GoogleSpreadsheet();
+		googleSpreadsheet.url(feed_url);
+		googleSpreadsheet.load(function(result) {
+			callback(result.data);
+	});
+}
+
+function getLang() {
+	return $("html").attr("lang");
 }

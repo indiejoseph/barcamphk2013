@@ -2227,3 +2227,1976 @@ if(!(b=e)){var g={height:i.innerHeight,width:i.innerWidth};if(!g.height&&((b=h.c
  * @version 1.2.7
  **/
 ;(function($){var l=location.href.replace(/#.*/,'');var g=$.localScroll=function(a){$('body').localScroll(a)};g.defaults={duration:1e3,axis:'y',event:'click',stop:true,target:window,reset:true};g.hash=function(a){if(location.hash){a=$.extend({},g.defaults,a);a.hash=false;if(a.reset){var e=a.duration;delete a.duration;$(a.target).scrollTo(0,a);a.duration=e}i(0,location,a)}};$.fn.localScroll=function(b){b=$.extend({},g.defaults,b);return b.lazy?this.bind(b.event,function(a){var e=$([a.target,a.target.parentNode]).filter(d)[0];if(e)i(a,e,b)}):this.find('a,area').filter(d).bind(b.event,function(a){i(a,this,b)}).end().end();function d(){return!!this.href&&!!this.hash&&this.href.replace(this.hash,'')==l&&(!b.filter||$(this).is(b.filter))}};function i(a,e,b){var d=e.hash.slice(1),f=document.getElementById(d)||document.getElementsByName(d)[0];if(!f)return;if(a)a.preventDefault();var h=$(b.target);if(b.lock&&h.is(':animated')||b.onBefore&&b.onBefore.call(b,a,f,h)===false)return;if(b.stop)h.stop(true);if(b.hash){var j=f.id==d?'id':'name',k=$('<a> </a>').attr(j,d).css({position:'absolute',top:$(window).scrollTop(),left:$(window).scrollLeft()});f[j]='';$('body').prepend(k);location=e.hash;k.remove();f[j]=d}h.scrollTo(f,b).trigger('notify.serialScroll',[f])}})(jQuery);
+
+/*
+Updated versions can be found at https://github.com/mikeymckay/google-spreadsheet-javascript
+*/var GoogleSpreadsheet, GoogleUrl;
+GoogleUrl = (function() {
+  function GoogleUrl(sourceIdentifier) {
+    this.sourceIdentifier = sourceIdentifier;
+    if (this.sourceIdentifier.match(/http(s)*:/)) {
+      this.url = this.sourceIdentifier;
+      this.gid = "";
+      try {
+        this.key = this.url.match(/key=(.*?)&/)[1];
+      } catch (error) {
+        this.key = this.url.match(/(cells|list)\/(.*?)\//)[2];
+      }
+      try {
+        this.gid = this.url.match(/gid=(.*)/)[1];
+      } catch (error) {
+        this.gid = this.url.match(RegExp("("+ this.key + ")\/(.*?)\/"))[2];
+      }
+    } else {
+      this.key = this.sourceIdentifier;
+    }
+    this.jsonCellsUrl = "http://spreadsheets.google.com/feeds/cells/" + this.key + "/" + this.gid + "/public/basic?alt=json-in-script";
+    this.jsonListUrl = "http://spreadsheets.google.com/feeds/list/" + this.key + "/" + this.gid + "/public/basic?alt=json-in-script";
+    this.jsonUrl = this.jsonCellsUrl;
+  }
+  return GoogleUrl;
+})();
+GoogleSpreadsheet = (function() {
+  function GoogleSpreadsheet() {}
+  GoogleSpreadsheet.prototype.load = function(callback) {
+    var intervalId, jsonUrl, safetyCounter, url, waitUntilLoaded;
+    url = this.googleUrl.jsonCellsUrl + "&callback=GoogleSpreadsheet.callbackCells";
+    $('body').append("<script src='" + url + "'/>");
+    jsonUrl = this.jsonUrl;
+    safetyCounter = 0;
+    waitUntilLoaded = function() {
+      var result;
+      result = GoogleSpreadsheet.find({
+        jsonUrl: jsonUrl
+      });
+      if (safetyCounter++ > 20 || ((result != null) && (result.data != null))) {
+        clearInterval(intervalId);
+        return callback(result);
+      }
+    };
+    intervalId = setInterval(waitUntilLoaded, 200);
+    if (typeof result != "undefined" && result !== null) {
+      return result;
+    }
+  };
+  GoogleSpreadsheet.prototype.url = function(url) {
+    return this.googleUrl(new GoogleUrl(url));
+  };
+  GoogleSpreadsheet.prototype.googleUrl = function(googleUrl) {
+    if (typeof googleUrl === "string") {
+      throw "Invalid url, expecting object not string";
+    }
+    this.url = googleUrl.url;
+    this.key = googleUrl.key;
+    this.jsonUrl = googleUrl.jsonUrl;
+    return this.googleUrl = googleUrl;
+  };
+  GoogleSpreadsheet.prototype.save = function() {
+    return localStorage["GoogleSpreadsheet." + this.type] = JSON.stringify(this);
+  };
+  return GoogleSpreadsheet;
+})();
+GoogleSpreadsheet.bless = function(object) {
+  var key, result, value;
+  result = new GoogleSpreadsheet();
+  for (key in object) {
+    value = object[key];
+    result[key] = value;
+  }
+  return result;
+};
+GoogleSpreadsheet.find = function(params) {
+  var item, itemObject, key, value, _i, _len;
+  try {
+    for (item in localStorage) {
+      if (item.match(/^GoogleSpreadsheet\./)) {
+        itemObject = JSON.parse(localStorage[item]);
+        for (key in params) {
+          value = params[key];
+          if (itemObject[key] === value) {
+            return GoogleSpreadsheet.bless(itemObject);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    for (_i = 0, _len = localStorage.length; _i < _len; _i++) {
+      item = localStorage[_i];
+      if (item.match(/^GoogleSpreadsheet\./)) {
+        itemObject = JSON.parse(localStorage[item]);
+        for (key in params) {
+          value = params[key];
+          if (itemObject[key] === value) {
+            return GoogleSpreadsheet.bless(itemObject);
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
+GoogleSpreadsheet.callbackCells = function(data) {
+  var cell, googleSpreadsheet, googleUrl;
+  googleUrl = new GoogleUrl(data.feed.id.$t);
+  googleSpreadsheet = GoogleSpreadsheet.find({
+    jsonUrl: googleUrl.jsonUrl
+  });
+  if (googleSpreadsheet === null) {
+    googleSpreadsheet = new GoogleSpreadsheet();
+    googleSpreadsheet.googleUrl(googleUrl);
+  }
+  googleSpreadsheet.data = (function() {
+    var _i, _len, _ref, _results;
+    _ref = data.feed.entry;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      cell = _ref[_i];
+      _results.push(cell.content.$t);
+    }
+    return _results;
+  })();
+  googleSpreadsheet.save();
+  return googleSpreadsheet;
+};
+/* TODO (Handle row based data)
+GoogleSpreadsheet.callbackList = (data) ->*/
+
+/*!
+ * jQuery Transit - CSS3 transitions and transformations
+ * (c) 2011-2012 Rico Sta. Cruz <rico@ricostacruz.com>
+ * MIT Licensed.
+ *
+ * http://ricostacruz.com/jquery.transit
+ * http://github.com/rstacruz/jquery.transit
+ */
+
+(function($) {
+  $.transit = {
+    version: "0.9.9",
+
+    // Map of $.css() keys to values for 'transitionProperty'.
+    // See https://developer.mozilla.org/en/CSS/CSS_transitions#Properties_that_can_be_animated
+    propertyMap: {
+      marginLeft    : 'margin',
+      marginRight   : 'margin',
+      marginBottom  : 'margin',
+      marginTop     : 'margin',
+      paddingLeft   : 'padding',
+      paddingRight  : 'padding',
+      paddingBottom : 'padding',
+      paddingTop    : 'padding'
+    },
+
+    // Will simply transition "instantly" if false
+    enabled: true,
+
+    // Set this to false if you don't want to use the transition end property.
+    useTransitionEnd: false
+  };
+
+  var div = document.createElement('div');
+  var support = {};
+
+  // Helper function to get the proper vendor property name.
+  // (`transition` => `WebkitTransition`)
+  function getVendorPropertyName(prop) {
+    // Handle unprefixed versions (FF16+, for example)
+    if (prop in div.style) return prop;
+
+    var prefixes = ['Moz', 'Webkit', 'O', 'ms'];
+    var prop_ = prop.charAt(0).toUpperCase() + prop.substr(1);
+
+    if (prop in div.style) { return prop; }
+
+    for (var i=0; i<prefixes.length; ++i) {
+      var vendorProp = prefixes[i] + prop_;
+      if (vendorProp in div.style) { return vendorProp; }
+    }
+  }
+
+  // Helper function to check if transform3D is supported.
+  // Should return true for Webkits and Firefox 10+.
+  function checkTransform3dSupport() {
+    div.style[support.transform] = '';
+    div.style[support.transform] = 'rotateY(90deg)';
+    return div.style[support.transform] !== '';
+  }
+
+  var isChrome = navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
+
+  // Check for the browser's transitions support.
+  support.transition      = getVendorPropertyName('transition');
+  support.transitionDelay = getVendorPropertyName('transitionDelay');
+  support.transform       = getVendorPropertyName('transform');
+  support.transformOrigin = getVendorPropertyName('transformOrigin');
+  support.transform3d     = checkTransform3dSupport();
+
+  var eventNames = {
+    'transition':       'transitionEnd',
+    'MozTransition':    'transitionend',
+    'OTransition':      'oTransitionEnd',
+    'WebkitTransition': 'webkitTransitionEnd',
+    'msTransition':     'MSTransitionEnd'
+  };
+
+  // Detect the 'transitionend' event needed.
+  var transitionEnd = support.transitionEnd = eventNames[support.transition] || null;
+
+  // Populate jQuery's `$.support` with the vendor prefixes we know.
+  // As per [jQuery's cssHooks documentation](http://api.jquery.com/jQuery.cssHooks/),
+  // we set $.support.transition to a string of the actual property name used.
+  for (var key in support) {
+    if (support.hasOwnProperty(key) && typeof $.support[key] === 'undefined') {
+      $.support[key] = support[key];
+    }
+  }
+
+  // Avoid memory leak in IE.
+  div = null;
+
+  // ## $.cssEase
+  // List of easing aliases that you can use with `$.fn.transition`.
+  $.cssEase = {
+    '_default':       'ease',
+    'in':             'ease-in',
+    'out':            'ease-out',
+    'in-out':         'ease-in-out',
+    'snap':           'cubic-bezier(0,1,.5,1)',
+    // Penner equations
+    'easeOutCubic':   'cubic-bezier(.215,.61,.355,1)',
+    'easeInOutCubic': 'cubic-bezier(.645,.045,.355,1)',
+    'easeInCirc':     'cubic-bezier(.6,.04,.98,.335)',
+    'easeOutCirc':    'cubic-bezier(.075,.82,.165,1)',
+    'easeInOutCirc':  'cubic-bezier(.785,.135,.15,.86)',
+    'easeInExpo':     'cubic-bezier(.95,.05,.795,.035)',
+    'easeOutExpo':    'cubic-bezier(.19,1,.22,1)',
+    'easeInOutExpo':  'cubic-bezier(1,0,0,1)',
+    'easeInQuad':     'cubic-bezier(.55,.085,.68,.53)',
+    'easeOutQuad':    'cubic-bezier(.25,.46,.45,.94)',
+    'easeInOutQuad':  'cubic-bezier(.455,.03,.515,.955)',
+    'easeInQuart':    'cubic-bezier(.895,.03,.685,.22)',
+    'easeOutQuart':   'cubic-bezier(.165,.84,.44,1)',
+    'easeInOutQuart': 'cubic-bezier(.77,0,.175,1)',
+    'easeInQuint':    'cubic-bezier(.755,.05,.855,.06)',
+    'easeOutQuint':   'cubic-bezier(.23,1,.32,1)',
+    'easeInOutQuint': 'cubic-bezier(.86,0,.07,1)',
+    'easeInSine':     'cubic-bezier(.47,0,.745,.715)',
+    'easeOutSine':    'cubic-bezier(.39,.575,.565,1)',
+    'easeInOutSine':  'cubic-bezier(.445,.05,.55,.95)',
+    'easeInBack':     'cubic-bezier(.6,-.28,.735,.045)',
+    'easeOutBack':    'cubic-bezier(.175, .885,.32,1.275)',
+    'easeInOutBack':  'cubic-bezier(.68,-.55,.265,1.55)'
+  };
+
+  // ## 'transform' CSS hook
+  // Allows you to use the `transform` property in CSS.
+  //
+  //     $("#hello").css({ transform: "rotate(90deg)" });
+  //
+  //     $("#hello").css('transform');
+  //     //=> { rotate: '90deg' }
+  //
+  $.cssHooks['transit:transform'] = {
+    // The getter returns a `Transform` object.
+    get: function(elem) {
+      return $(elem).data('transform') || new Transform();
+    },
+
+    // The setter accepts a `Transform` object or a string.
+    set: function(elem, v) {
+      var value = v;
+
+      if (!(value instanceof Transform)) {
+        value = new Transform(value);
+      }
+
+      // We've seen the 3D version of Scale() not work in Chrome when the
+      // element being scaled extends outside of the viewport.  Thus, we're
+      // forcing Chrome to not use the 3d transforms as well.  Not sure if
+      // translate is affectede, but not risking it.  Detection code from
+      // http://davidwalsh.name/detecting-google-chrome-javascript
+      if (support.transform === 'WebkitTransform' && !isChrome) {
+        elem.style[support.transform] = value.toString(true);
+      } else {
+        elem.style[support.transform] = value.toString();
+      }
+
+      $(elem).data('transform', value);
+    }
+  };
+
+  // Add a CSS hook for `.css({ transform: '...' })`.
+  // In jQuery 1.8+, this will intentionally override the default `transform`
+  // CSS hook so it'll play well with Transit. (see issue #62)
+  $.cssHooks.transform = {
+    set: $.cssHooks['transit:transform'].set
+  };
+
+  // jQuery 1.8+ supports prefix-free transitions, so these polyfills will not
+  // be necessary.
+  if ($.fn.jquery < "1.8") {
+    // ## 'transformOrigin' CSS hook
+    // Allows the use for `transformOrigin` to define where scaling and rotation
+    // is pivoted.
+    //
+    //     $("#hello").css({ transformOrigin: '0 0' });
+    //
+    $.cssHooks.transformOrigin = {
+      get: function(elem) {
+        return elem.style[support.transformOrigin];
+      },
+      set: function(elem, value) {
+        elem.style[support.transformOrigin] = value;
+      }
+    };
+
+    // ## 'transition' CSS hook
+    // Allows you to use the `transition` property in CSS.
+    //
+    //     $("#hello").css({ transition: 'all 0 ease 0' });
+    //
+    $.cssHooks.transition = {
+      get: function(elem) {
+        return elem.style[support.transition];
+      },
+      set: function(elem, value) {
+        elem.style[support.transition] = value;
+      }
+    };
+  }
+
+  // ## Other CSS hooks
+  // Allows you to rotate, scale and translate.
+  registerCssHook('scale');
+  registerCssHook('translate');
+  registerCssHook('rotate');
+  registerCssHook('rotateX');
+  registerCssHook('rotateY');
+  registerCssHook('rotate3d');
+  registerCssHook('perspective');
+  registerCssHook('skewX');
+  registerCssHook('skewY');
+  registerCssHook('x', true);
+  registerCssHook('y', true);
+
+  // ## Transform class
+  // This is the main class of a transformation property that powers
+  // `$.fn.css({ transform: '...' })`.
+  //
+  // This is, in essence, a dictionary object with key/values as `-transform`
+  // properties.
+  //
+  //     var t = new Transform("rotate(90) scale(4)");
+  //
+  //     t.rotate             //=> "90deg"
+  //     t.scale              //=> "4,4"
+  //
+  // Setters are accounted for.
+  //
+  //     t.set('rotate', 4)
+  //     t.rotate             //=> "4deg"
+  //
+  // Convert it to a CSS string using the `toString()` and `toString(true)` (for WebKit)
+  // functions.
+  //
+  //     t.toString()         //=> "rotate(90deg) scale(4,4)"
+  //     t.toString(true)     //=> "rotate(90deg) scale3d(4,4,0)" (WebKit version)
+  //
+  function Transform(str) {
+    if (typeof str === 'string') { this.parse(str); }
+    return this;
+  }
+
+  Transform.prototype = {
+    // ### setFromString()
+    // Sets a property from a string.
+    //
+    //     t.setFromString('scale', '2,4');
+    //     // Same as set('scale', '2', '4');
+    //
+    setFromString: function(prop, val) {
+      var args =
+        (typeof val === 'string')  ? val.split(',') :
+        (val.constructor === Array) ? val :
+        [ val ];
+
+      args.unshift(prop);
+
+      Transform.prototype.set.apply(this, args);
+    },
+
+    // ### set()
+    // Sets a property.
+    //
+    //     t.set('scale', 2, 4);
+    //
+    set: function(prop) {
+      var args = Array.prototype.slice.apply(arguments, [1]);
+      if (this.setter[prop]) {
+        this.setter[prop].apply(this, args);
+      } else {
+        this[prop] = args.join(',');
+      }
+    },
+
+    get: function(prop) {
+      if (this.getter[prop]) {
+        return this.getter[prop].apply(this);
+      } else {
+        return this[prop] || 0;
+      }
+    },
+
+    setter: {
+      // ### rotate
+      //
+      //     .css({ rotate: 30 })
+      //     .css({ rotate: "30" })
+      //     .css({ rotate: "30deg" })
+      //     .css({ rotate: "30deg" })
+      //
+      rotate: function(theta) {
+        this.rotate = unit(theta, 'deg');
+      },
+
+      rotateX: function(theta) {
+        this.rotateX = unit(theta, 'deg');
+      },
+
+      rotateY: function(theta) {
+        this.rotateY = unit(theta, 'deg');
+      },
+
+      // ### scale
+      //
+      //     .css({ scale: 9 })      //=> "scale(9,9)"
+      //     .css({ scale: '3,2' })  //=> "scale(3,2)"
+      //
+      scale: function(x, y) {
+        if (y === undefined) { y = x; }
+        this.scale = x + "," + y;
+      },
+
+      // ### skewX + skewY
+      skewX: function(x) {
+        this.skewX = unit(x, 'deg');
+      },
+
+      skewY: function(y) {
+        this.skewY = unit(y, 'deg');
+      },
+
+      // ### perspectvie
+      perspective: function(dist) {
+        this.perspective = unit(dist, 'px');
+      },
+
+      // ### x / y
+      // Translations. Notice how this keeps the other value.
+      //
+      //     .css({ x: 4 })       //=> "translate(4px, 0)"
+      //     .css({ y: 10 })      //=> "translate(4px, 10px)"
+      //
+      x: function(x) {
+        this.set('translate', x, null);
+      },
+
+      y: function(y) {
+        this.set('translate', null, y);
+      },
+
+      // ### translate
+      // Notice how this keeps the other value.
+      //
+      //     .css({ translate: '2, 5' })    //=> "translate(2px, 5px)"
+      //
+      translate: function(x, y) {
+        if (this._translateX === undefined) { this._translateX = 0; }
+        if (this._translateY === undefined) { this._translateY = 0; }
+
+        if (x !== null && x !== undefined) { this._translateX = unit(x, 'px'); }
+        if (y !== null && y !== undefined) { this._translateY = unit(y, 'px'); }
+
+        this.translate = this._translateX + "," + this._translateY;
+      }
+    },
+
+    getter: {
+      x: function() {
+        return this._translateX || 0;
+      },
+
+      y: function() {
+        return this._translateY || 0;
+      },
+
+      scale: function() {
+        var s = (this.scale || "1,1").split(',');
+        if (s[0]) { s[0] = parseFloat(s[0]); }
+        if (s[1]) { s[1] = parseFloat(s[1]); }
+
+        // "2.5,2.5" => 2.5
+        // "2.5,1" => [2.5,1]
+        return (s[0] === s[1]) ? s[0] : s;
+      },
+
+      rotate3d: function() {
+        var s = (this.rotate3d || "0,0,0,0deg").split(',');
+        for (var i=0; i<=3; ++i) {
+          if (s[i]) { s[i] = parseFloat(s[i]); }
+        }
+        if (s[3]) { s[3] = unit(s[3], 'deg'); }
+
+        return s;
+      }
+    },
+
+    // ### parse()
+    // Parses from a string. Called on constructor.
+    parse: function(str) {
+      var self = this;
+      str.replace(/([a-zA-Z0-9]+)\((.*?)\)/g, function(x, prop, val) {
+        self.setFromString(prop, val);
+      });
+    },
+
+    // ### toString()
+    // Converts to a `transition` CSS property string. If `use3d` is given,
+    // it converts to a `-webkit-transition` CSS property string instead.
+    toString: function(use3d) {
+      var re = [];
+
+      for (var i in this) {
+        if (this.hasOwnProperty(i)) {
+          // Don't use 3D transformations if the browser can't support it.
+          if ((!support.transform3d) && (
+            (i === 'rotateX') ||
+            (i === 'rotateY') ||
+            (i === 'perspective') ||
+            (i === 'transformOrigin'))) { continue; }
+
+          if (i[0] !== '_') {
+            if (use3d && (i === 'scale')) {
+              re.push(i + "3d(" + this[i] + ",1)");
+            } else if (use3d && (i === 'translate')) {
+              re.push(i + "3d(" + this[i] + ",0)");
+            } else {
+              re.push(i + "(" + this[i] + ")");
+            }
+          }
+        }
+      }
+
+      return re.join(" ");
+    }
+  };
+
+  function callOrQueue(self, queue, fn) {
+    if (queue === true) {
+      self.queue(fn);
+    } else if (queue) {
+      self.queue(queue, fn);
+    } else {
+      fn();
+    }
+  }
+
+  // ### getProperties(dict)
+  // Returns properties (for `transition-property`) for dictionary `props`. The
+  // value of `props` is what you would expect in `$.css(...)`.
+  function getProperties(props) {
+    var re = [];
+
+    $.each(props, function(key) {
+      key = $.camelCase(key); // Convert "text-align" => "textAlign"
+      key = $.transit.propertyMap[key] || $.cssProps[key] || key;
+      key = uncamel(key); // Convert back to dasherized
+
+      if ($.inArray(key, re) === -1) { re.push(key); }
+    });
+
+    return re;
+  }
+
+  // ### getTransition()
+  // Returns the transition string to be used for the `transition` CSS property.
+  //
+  // Example:
+  //
+  //     getTransition({ opacity: 1, rotate: 30 }, 500, 'ease');
+  //     //=> 'opacity 500ms ease, -webkit-transform 500ms ease'
+  //
+  function getTransition(properties, duration, easing, delay) {
+    // Get the CSS properties needed.
+    var props = getProperties(properties);
+
+    // Account for aliases (`in` => `ease-in`).
+    if ($.cssEase[easing]) { easing = $.cssEase[easing]; }
+
+    // Build the duration/easing/delay attributes for it.
+    var attribs = '' + toMS(duration) + ' ' + easing;
+    if (parseInt(delay, 10) > 0) { attribs += ' ' + toMS(delay); }
+
+    // For more properties, add them this way:
+    // "margin 200ms ease, padding 200ms ease, ..."
+    var transitions = [];
+    $.each(props, function(i, name) {
+      transitions.push(name + ' ' + attribs);
+    });
+
+    return transitions.join(', ');
+  }
+});
+
+
+  /* -- https://bitbucket.org/AMcBain/bb-code-parser
+     --
+     --
+     -- JS BB-Code Parsing Library
+     --
+     -- Copyright 2009-2011, A.McBain
+
+      Redistribution and use, with or without modification, are permitted provided that the following
+      conditions are met:
+
+         1. Redistributions of source code must retain the above copyright notice, this list of
+            conditions and the following disclaimer.
+         2. Redistributions of binaries must reproduce the above copyright notice, this list of
+            conditions and the following disclaimer in other materials provided with the distribution.
+         4. The name of the author may not be used to endorse or promote products derived from this
+            software without specific prior written permission.
+
+      THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+      BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+      ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+      EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+      OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+      OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+      ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+     --
+
+      While this software is released "as is", I don't mind getting bug reports.
+  */
+
+  /*
+     Most of the supported code specifications were aquired from here: http://www.bbcode.org/reference.php
+
+     Due to the way this parser/formatter is designed, content of a code is cannot be relied on to be passed
+     to the escape function on a code instance in between the calling of the open and close functions. So
+     certain things otherwise workable might not be (such as using the content of a link as the argument if
+     no argument was given).
+
+     This parser/formatter does not support calling out to anonymous functions (callbacks) when a code with-
+     out an implementation is encountered. The parser/formatter would have to accept callbacks for all
+     methods available on BBCode (plus an extra parameter for the code name). This is not in the plan to be
+     added as a feature. Maybe an adventerous person could attempt this.
+  */
+
+  /* Using the BBCodeParser:
+    Note any of the inputs shown here can be skipped by sending null instead:
+    ex:  new BBCodeParser(null, settings);
+
+    // Replace all defined codes with default settings
+    var parser = new BBCodeParser();
+    var output = parser.format(input);
+
+    // Replace all allowed codes with default settings
+    var allowedCodes = ['b', 'i', 'u'];
+    var parser = new BBCodeParser(allowedCodes);
+    var output = parser.format(input);
+
+    // Replace all allowed codes with custom settings (not all codes have settings)
+    var allowedCodes = ['b', 'i', 'u'];
+    var settings = {
+      'FontSizeUnit' : 'px'
+    };
+    var parser = new BBCodeParser(allowedCode, settings);
+    var output = parser.format(input);
+
+    // Replace the implementation for 'Bold'
+    var allowedCodes = ['b', 'i', 'u'];
+    settings = {
+      'FontSizeUnit' : 'px'
+    };
+    var codeImpls = {
+      'b' : new HTMLBoldBBCode()
+    };
+    var parser = new BBCodeParser(allowedCode, settings, codeImpls);
+    var output = parser.format(input);
+  */
+
+
+  // Standard interface to be implemented by all "BB-Codes"
+  function BBCode() {
+    // Name to be displayed, ex: Bold
+    this.getCodeName = function() {};
+    // Name of the code as written, ex: b
+    // Display names *must not* start with /
+    this.getDisplayName = function() {};
+    // Whether or not this code has an end marker
+    // Codes without an end marker should implement the open method, and leave the close method empty
+    this.needsEnd = function() {};
+    // Demotes whether a code's content should be parsed for other codes
+    // Codes such as a [code][/code] block might not want their content parsed for other codes
+    this.canHaveCodeContent = function() {};
+    // Whether or not this code can have an argument
+    this.canHaveArgument = function() {};
+    // Whether or not this code must have an argument
+    // For consistency, a code which cannot have an argument should return false here
+    this.mustHaveArgument = function() {};
+    // Denotes whether or not the parser should generate a closing code if the returned opening code is already in effect
+    // This is called before a new code of a type is opened. Return null to indicate that no code should be auto closed
+    // The code returned should be equivalent to the "display name" of the code to be closed, ex: 'b' not 'Bold'
+    // Confusing? ex: '[*]foo, bar [*]baz!' (if auto close code is '*') generates '[*]foo, bar[/*][*]baz!'
+    //            An "opening" [*] was recorded, so when it hit the second [*], it inserted a closing [/*] first
+    this.getAutoCloseCodeOnOpen = function() {};
+    this.getAutoCloseCodeOnClose = function() {};
+    // Whether or not the given argument is valid
+    // Codes which do not take an argument should return false and those which accept any value should return true
+    this.isValidArgument = function(settings, argument/*=null*/) {};
+    // Whether or not the actual display name of a code is a valid parent for this code
+    // The "actual display name" is 'ul' or 'ol', not "Unordered List", etc.
+    // If the code isn't nested, 'GLOBAL' will be passed instead
+    this.isValidParent = function(settings, parent/*=null*/) {};
+    // Escape content that will eventually be sent to the format function
+    // Take care not to escape the content again inside the format function
+    this.escape = function(settings, content) {};
+    // Returns a statement indicating the opening of something which contains content
+    // (whatever that is in the output format/language returned)
+    // argument is the part after the equals in some BB-Codes, ex: [url=http://example.org]...[/url]
+    // closingCode is used when allowOverlappingCodes is true and contains the code being closed
+    //             (this is because all open codes are closed then reopened after the closingCode is closed)
+    this.open = function(settings, argument/*=null*/, closingCode/*=null*/) {};
+    // Returns a statement indicating the closing of something which contains content
+    // whatever that is in the output format/language returned)
+    // argument is the part after the equals in some BB-Codes, ex: [url=http://example.org]...[/url]
+    // closingCode is used when allowOverlappingCodes is true and cotnains the code being closed
+    //             (this is because all open codes are closed then reopened after the closingCode is closed)
+    //             null is sent for to the code represented by closingCode (it cannot 'force close' itthis)
+    this.close = function(settings, argument/*=null*/, closingCode/*=null*/) {};
+  }
+
+  // PHP Compat functions
+  this.PHPC = {
+    count: function(value) {
+      var count = 0;
+      for(var i in value) {
+        count++;
+      }
+      return count;
+    },
+    in_array: function(needle, haystack) {
+      var found = false;
+      for(var i = 0; i < haystack.length && !found; i++) {
+        found = haystack[i] === needle;
+      }
+      return found;
+    },
+    floatval: function(value) {
+      return parseFloat(value) || 0;
+    },
+    intval: function(value) {
+      var number = Number(value);
+      return (isNaN(number))? 0 : number;
+    },
+    htmlspecialchars: function(value) {
+      if(!value) return "";
+      return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  }
+
+  /*
+     Sets up the BB-Code parser with the given settings.
+     If null is passed for allowed codes, all are allowed. If no settings are passed, defaults are used.
+     These parameters are supplimentary and overrides, that is, they are in addition to the defaults
+     already included, but they will override an default if found.
+
+     Use null to skip any parameters to set later ones.
+
+     allowedCodes is an array of "display names" (b, i, ...) that are allowed to be parsed and formatted
+                    in the output. If null is passed, all default codes are allowed.
+         Default: null (allow all defaults)
+
+     settings is a mapped array of settings which various formatter implementations may use to control output.
+         Default: null (use built in default settings)
+
+     codes is a mapped array of "display names" to implementations of BBCode which are used to format output.
+         Default: null (no supplementary codes)
+
+     supplementDeafults tells the parser whether the given codes are used to supplement default codes (and
+                        override existing ones if they exist) or whether they should be the only implementations
+                        available to the parser (do not use the defaults).
+                        Note: if this is true, and null is passed for codes, NO code imlplementations will be available.
+                        Note: if this is true, and no 'GLOBAL' implementation is provided, a default one
+                              which does nothing will be provided.
+         Default: true (passed in implementation codes supplement defaults)
+
+     allOrNothing refers to what happens when an invalid code is found. If true, it stops returns the input.
+                  If false, it keeps on going (output may not display as expected).
+                  Codes which are not allowed or codes for which no formatter cannot be found are not invalid.
+         Default: true
+
+     handleOverlappingCodes tells the parser to properly (forcefully) handle overlapping codes.
+                            This is done by closing open tags which overlap, then reopening them after
+                            the closed one. This will only work when allOrNothing is false.
+         Default: false
+
+     escapeContentOutput tells the parser whether or not it should escape the contents of BBCodes in the output.
+                         Content is any text not directely related to a BBCode itself. [b]this is content[/b]
+         Default: true
+
+     codeStartSymbol is the symbol denoting the start of a code (default is [ for easy compatability)
+         Default: '['
+
+     codeEndSymbol is the symbol denoting the end of a code (default is ] for easy compatability with BB-Code)
+         Default: ']'
+  */
+  // Class for the BB-Code Parser.
+  // Each parser is immutable, each instance's settings, codes, etc, are "final" after the parser is created.
+  function BBCodeParser(allowedCodes, settings, codes, supplementDefaults, allOrNothing, handleOverlappingCodes, escapeContentOutput, codeStartSymbol, codeEndSymbol) {
+
+    var _bbCodes = [];
+
+    // Mapped Array with all the default implementations of BBCodes.
+    // It is not advised this be edited directly as this will affect all other calls.
+    // Instead, pass a Mapped Array of only the codes to be overridden to the BBCodeParser_replace function.
+    function setupDefaultCodes() {
+      _bbCodes = {
+        'GLOBAL'  : new HTMLGlobalBBCode(),
+        'b'       : new HTMLBoldBBCode(),
+        'i'       : new HTMLItalicBBCode(),
+        'u'       : new HTMLUnderlineBBCode(),
+        's'       : new HTMLStrikeThroughBBCode(),
+        'font'    : new HTMLFontBBCode(),
+        'size'    : new HTMLFontSizeBBCode(),
+        'color'   : new HTMLColorBBCode(),
+        'left'    : new HTMLLeftBBCode(),
+        'center'  : new HTMLCenterBBCode(),
+        'right'   : new HTMLLeftBBCode(),
+        'quote'   : new HTMLQuoteBBCode(),
+        'code'    : new HTMLCodeBBCode(),
+        'codebox' : new HTMLCodeBoxBBCode(),
+        'url'     : new HTMLLinkBBCode(),
+        'img'     : new HTMLImageBBCode(),
+        'ul'      : new HTMLUnorderedListBBCode(),
+        'ol'      : new HTMLOrderedListBBCode(),
+        'li'      : new HTMLListItemBBCode(),
+        'list'    : new HTMLListBBCode(),
+        '*'       : new HTMLStarBBCode()
+      };
+    }
+
+    // The allowed codes (set up in the constructor)
+    var _allowedCodes = [];
+
+    // Mapped Array with properties which can be used by BBCode implementations to affect output.
+    // It is not advised this be edited directly as this will affect all other calls.
+    // Instead, pass a Mapped Array of only the properties to be overridden to the BBCodeParser_replace function.
+    var _settings = {
+      'XHTML'                    : false,
+      'FontSizeUnit'             : 'pt',
+      'FontSizeMax'              : 48, /* Set to null to allow any font-size */
+      'ColorAllowAdvFormats'     : false, /* Whether the rgb[a], hsl[a] color formats should be accepted */
+      'QuoteTitleBackground'     : '#e4eaf2',
+      'QuoteBorder'              : '1px solid gray',
+      'QuoteBackground'          : 'white',
+      'QuoteCSSClassName'        : 'quotebox-{by}', /* {by} is the quote parameter ex: [quote=Waldo], {by} = Waldo */
+      'CodeTitleBackground'      : '#ffc29c',
+      'CodeBorder'               : '1px solid gray',
+      'CodeBackground'           : 'white',
+      'CodeCSSClassName'         : 'codebox-{lang}', /* {lang} is the code parameter ex: [code=PHP], {lang} = php */
+      'LinkUnderline'            : true,
+      'LinkColor'                : 'blue'
+      /*'ImageWidthMax'            : 640,*/ // Uncomment these to tell the BB-Code parser to use them
+      /*'ImageHeightMax'           : 480,*/ // The default is to allow any size image
+      /*'UnorderedListDefaultType' : 'circle',*/ // Uncomment these to tell the BB-Code parser to use this
+      /*'OrderedListDefaultType'   : '1',     */ // default type if the given one is invalid **
+      /*'ListDefaultType'          : 'circle' */ // ...
+    };
+    // ** Note that this affects whether a tag is printed out "as is" if a bad argument is given.
+    // It may not affect those tags which can take "" or nothing as their argument
+    // (they may assign a relevant default themselves).
+
+    // See the constructor comment for details
+    var _allOrNothing = true;
+    var _handleOverlappingCodes = false;
+    var _escapeContentOutput = true;
+    var _codeStartSymbol = '[';
+    var _codeEndSymbol = ']';
+
+
+      /**************************/
+     /* START CONSTRUCTOR CODE */
+    /**************************/
+
+    if(allowedCodes === undefined) allowedCodes = null;
+    if(settings === undefined) settings = null;
+    if(supplementDefaults === undefined) supplementDefaults = true;
+    if(allOrNothing === undefined) allOrNothing = true;
+    if(handleOverlappingCodes === undefined) handleOverlappingCodes = false;
+    if(codeStartSymbol === undefined) codeStartSymbol = '[';
+    if(codeEndSymbol === undefined) codeEndSymbol = ']';
+
+
+    if(allOrNothing === true || allOrNothing === false) _allOrNothing = allOrNothing;
+    if(handleOverlappingCodes === true || handleOverlappingCodes === false) _handleOverlappingCodes = handleOverlappingCodes;
+    if(escapeContentOutput === true || escapeContentOutput === false) _escapeContentOutput = escapeContentOutput;
+    if(codeStartSymbol) _codeStartSymbol = codeStartSymbol;
+    if(codeEndSymbol) _codeEndSymbol = codeEndSymbol;
+
+    if(PHPC.count(_bbCodes) === 0) {
+      setupDefaultCodes();
+    }
+
+    // Copy settings
+    var key;
+    if(!settings) settings = {};
+    for(key in settings) {
+      value = settings[key];
+      _settings[key] = value + '';
+    }
+
+    // Copy passed code implementations
+    if(!codes) codes = {};
+    if(supplementDefaults) {
+      for(key in codes) {
+        value = codes[key];
+        if(value instanceof BBCode) {
+          _bbCodes[key] = value;
+        }
+      }
+    } else {
+      _bbCodes = codes;
+
+      // If no global bb-code implementation, provide a default one.
+      if(!BBCodeParser.isValidKey(_bbCodes, 'GLOBAL') || !(_bbCodes['GLOBAL'] instanceof BBCode)) {
+        _bbCodes['GLOBAL'] = new DefaultGlobalBBCode();
+      }
+    }
+
+    // If allowed codes is null, make it the same as specifying all the codes
+    var count = PHPC.count(allowedCodes), i;
+    if(count > 0) {
+      for(i = 0; i < count; i++) {
+        _allowedCodes.push(allowedCodes[i] + '');
+      }
+    } else if(allowedCodes === null) {
+      for(key in _bbCodes) {
+        _allowedCodes.push(key + '');
+      }
+    }
+
+      /************************/
+     /* END CONSTRUCTOR CODE */
+    /************************/
+
+
+    // Parses and replaces allowed BBCodes with the settings given when this parser was created
+    // allOrNothing, handleOverlapping, and escapeContentOutput can be overridden per call
+    this.format = function(input, allOrNothing, handleOverlappingCodes, escapeContentOutput) {
+
+      // Copy over defaults if no overrides given
+      if(allOrNothing !== true && allOrNothing !== false) {
+        allOrNothing = _allOrNothing;
+      }
+      if(handleOverlappingCodes !== true && handleOverlappingCodes !== false) {
+        handleOverlappingCodes = _handleOverlappingCodes;
+      }
+      if(escapeContentOutput !== true && escapeContentOutput !== false) {
+        escapeContentOutput = _escapeContentOutput;
+      }
+
+      // Why bother parsing if there's no codes to find?
+      var moreThanDefaultGlobal = PHPC.count(_bbCodes) - ((_bbCodes['GLOBAL'] instanceof DefaultGlobalBBCode)? 1 : 0) > 0;
+      if(PHPC.count(_allowedCodes) > 0 && PHPC.count(_bbCodes) > 0 && moreThanDefaultGlobal) {
+        return state_replace(input, _allowedCodes, _settings, _bbCodes, allOrNothing, handleOverlappingCodes, escapeContentOutput, _codeStartSymbol, _codeEndSymbol);
+      }
+
+      return input;
+    };
+
+    function state_replace(input, allowedCodes, settings, codes, allOrNothing, handleOverlappingCodes, escapeContentOutput, codeStartSymbol, codeEndSymbol) {
+      var output = '';
+
+      // If no brackets, just dump it back out (don't spend time parsing it)
+      if(input.lastIndexOf(codeStartSymbol) !== -1 && input.lastIndexOf(codeEndSymbol) !== -1) {
+        var queue = []; // queue of codes and content
+        var stack = []; // stack of open codes
+
+        // Iterate over input, finding start symbols
+        var tokenizer = new BBCodeParser_MultiTokenizer(input);
+        while(tokenizer.hasNextToken(codeStartSymbol)) {
+          var before = tokenizer.nextToken(codeStartSymbol);
+          var code = tokenizer.nextToken(codeEndSymbol);
+
+          // If "valid" parse further
+          if(code !== '') {
+
+            // Store content before code
+            if(before !== '') {
+              queue.push(new BBCodeParser_Token(BBCodeParser_Token.CONTENT, before));
+            }
+
+            // Parse differently depending on whether or not there's an argument
+            var codeDisplayName, codeArgument;
+            var equals = code.lastIndexOf('=');
+            if(equals !== -1) {
+              codeDisplayName = code.substr(0, equals);
+              codeArgument = code.substr(equals + 1);
+            } else {
+              codeDisplayName = code;
+              codeArgument = null;
+            }
+
+            // End codes versus start codes
+            var autoCloseCode;
+            if(code.substr(0, 1) === '/') {
+              var codeNoSlash = codeDisplayName.substr(1);
+
+              // Handle auto closing codes
+              if(BBCodeParser.isValidKey(codes, codeNoSlash) && (autoCloseCode = codes[codeNoSlash].getAutoCloseCodeOnClose()) &&
+                 BBCodeParser.isValidKey(codes, autoCloseCode) && PHPC.in_array(autoCloseCode, stack)) {
+
+                stack = array_remove(stack, autoCloseCode, true);
+                queue.push(new BBCodeParser_Token(BBCodeParser_Token.CODE_END, '/' + autoCloseCode));
+              }
+
+              queue.push(new BBCodeParser_Token(BBCodeParser_Token.CODE_END, codeDisplayName));
+              codeDisplayName = codeNoSlash;
+            } else {
+
+              // Handle auto closing codes
+              if(BBCodeParser.isValidKey(codes, codeDisplayName) && (autoCloseCode = codes[codeDisplayName].getAutoCloseCodeOnOpen()) &&
+                 BBCodeParser.isValidKey(codes, autoCloseCode) && PHPC.in_array(autoCloseCode, stack)) {
+
+                stack = array_remove(stack, autoCloseCode, true);
+                queue.push(new BBCodeParser_Token(BBCodeParser_Token.CODE_END, '/' + autoCloseCode));
+              }
+
+              queue.push(new BBCodeParser_Token(BBCodeParser_Token.CODE_START, codeDisplayName, codeArgument));
+              stack.push(codeDisplayName);
+            }
+
+            // Check for codes with no implementation and codes which aren't allowed
+            if(!BBCodeParser.isValidKey(codes, codeDisplayName)) {
+              queue[PHPC.count(queue) - 1].status = BBCodeParser_Token.NOIMPLFOUND;
+            } else if(!PHPC.in_array(codeDisplayName, allowedCodes)) {
+              queue[PHPC.count(queue) - 1].status = BBCodeParser_Token.NOTALLOWED;
+            }
+
+          } else if(code === '') {
+            queue.push(new BBCodeParser_Token(BBCodeParser_Token.CONTENT, before + '[]'));
+          }
+        }
+
+        // Get any text after the last end symbold
+        var lastBits = input.substr(input.lastIndexOf(codeEndSymbol) + codeEndSymbol.length);
+        if(lastBits !== '') {
+          queue.push(new BBCodeParser_Token(BBCodeParser_Token.CONTENT, lastBits));
+        }
+
+        // Find/mark all valid start/end code pairs
+        var count = PHPC.count(queue);
+        for(i = 0; i < count; i++) {
+          var token = queue[i];
+
+          // Handle undetermined and valid codes
+          if(token.status !== BBCodeParser_Token.NOIMPLFOUND && token.status !== BBCodeParser_Token.NOTALLOWED) {
+
+            // Handle start and end codes
+            if(token.type === BBCodeParser_Token.CODE_START) {
+
+              // Start codes which don't need an end are valid
+              if(!codes[token.content].needsEnd()) {
+                token.status = BBCodeParser_Token.VALID;
+              }
+
+            } else if(token.type === BBCodeParser_Token.CODE_END) {
+              content = token.content.substr(1);
+
+              // Ending codes for items which don't need an end are technically invalid, but since
+              // the start code is valid (and this-contained) we'll turn them into regular content
+              if(!codes[content].needsEnd()) {
+                token.type = BBCodeParser_Token.CONTENT;
+                token.status = BBCodeParser_Token.VALID;
+              } else {
+
+                // Try our best to handle overlapping codes (they are a real PITA)
+                var start;
+                if(handleOverlappingCodes) {
+                  start = state__findStartCodeOfType(queue, content, i);
+                } else {
+                  start = state__findStartCodeWithStatus(queue, BBCodeParser_Token.UNDETERMINED, i);
+                }
+
+                // Handle valid end codes, mark others invalid
+                if(start === false || queue[start].content !== content) {
+                  token.status = BBCodeParser_Token.INVALID;
+                } else {
+                  token.status = BBCodeParser_Token.VALID;
+                  token.matches = start;
+                  queue[start].status = BBCodeParser_Token.VALID;
+                  queue[start].matches = i;
+                }
+              }
+            }
+          }
+
+          // If all or nothing, just return the input (as we found 1 invalid code)
+          if(allOrNothing && token.status === BBCodeParser_Token.INVALID) {
+            return input;
+          }
+        }
+
+        // Empty the stack
+        stack = [];
+
+        // Final loop to print out all the open/close tags as appropriate
+        for(i = 0; i < count; i++) {
+          var parent, token = queue[i];
+
+          // Escape content tokens via their parent's escaping function
+          if(token.type === BBCodeParser_Token.CONTENT) {
+            parent = state__findStartCodeWithStatus(queue, BBCodeParser_Token.VALID, i);
+            output += (!escapeContentOutput)? token.content : (parent === false || !BBCodeParser.isValidKey(codes, queue[parent].content))? codes['GLOBAL'].escape(settings, token.content) : codes[queue[parent].content].escape(settings, token.content);
+
+          // Handle start codes
+          } else if(token.type === BBCodeParser_Token.CODE_START) {
+            parent = null;
+
+            // If undetermined or currently valid, validate against various codes rules
+            if(token.status !== BBCodeParser_Token.NOIMPLFOUND && token.status !== BBCodeParser_Token.NOTALLOWED) {
+              parent = state__findParentStartCode(queue, i);
+
+              if((token.status === BBCodeParser_Token.UNDETERMINED && codes[token.content].needsEnd()) ||
+                 (codes[token.content].canHaveArgument() && !codes[token.content].isValidArgument(settings, token.argument)) || 
+                 (!codes[token.content].canHaveArgument() && token.argument) ||
+                 (codes[token.content].mustHaveArgument() && !token.argument) ||
+                 (parent !== false && !codes[queue[parent].content].canHaveCodeContent())) {
+
+                token.status = BBCodeParser_Token.INVALID;
+                // Both tokens in the pair should be marked
+                if(token.status) {
+                  queue[token.matches].status = BBCodeParser_Token.INVALID;
+                }
+
+                // AllOrNothing, return input
+                if(allOrNothing) return input;
+              }
+
+              parent = (parent === false)? 'GLOBAL' : queue[parent].content;
+            }
+
+            // Check the parent code too ... some codes are only used within other codes
+            if(token.status === BBCodeParser_Token.VALID && codes[token.content].isValidParent(settings, parent)) {
+              output += codes[token.content].open(settings, token.argument);
+
+              // Store all open codes
+              if(handleOverlappingCodes) stack.push(token);
+            } else if(token.argument !== null) {
+              output += codeStartSymbol + token.content + '=' + token.argument + codeEndSymbol;
+            } else {
+              output += codeStartSymbol + token.content + codeEndSymbol;
+            }
+
+          // Handle end codes
+          } else if(token.type === BBCodeParser_Token.CODE_END) {
+
+            if(token.status === BBCodeParser_Token.VALID) {
+              var content = token.content.substr(1);
+
+              // Remove the closing code, close all open codes
+              if(handleOverlappingCodes) {
+                var scount = PHPC.count(stack);
+
+                // Codes must be closed in the same order they were opened
+                for(var j = scount - 1; j >= 0; j--) {
+                  var jtoken = stack[j];
+                  output += codes[jtoken.content].close(settings, jtoken.argument, (jtoken.content === content)? null : content);
+                }
+
+                // Removes matching open code
+                stack = array_remove(stack, queue[token.matches], true);
+              } else {
+
+                // Close the current code
+                output += codes[content].close(settings, token.argument);
+              }
+
+              // Now reopen all remaing codes
+              if(handleOverlappingCodes) {
+                var scount = PHPC.count(stack);
+
+                for(var j = 0; j < scount; j++) {
+                  var jtoken = stack[j];
+                  output += codes[jtoken.content].open(settings, jtoken.argument, (jtoken.content === content)? null : content);
+                }
+              }
+            } else {
+              output += codeStartSymbol + token.content + codeEndSymbol;
+            }
+          }
+        }
+      } else {
+        output += (!escapeContentOutput)? input : codes['GLOBAL'].escape(settings, input);
+      }
+
+      return output;
+    };
+
+    // Finds the closest parent with a certain status to the given position, working backwards
+    function state__findStartCodeWithStatus(queue, status, position) {
+      var found = false;
+      var index = -1;
+
+      for(var i = position - 1; i >= 0 && !found; i--) {
+        found = queue[i].type === BBCodeParser_Token.CODE_START && queue[i].status === status;
+        index = i;
+      }
+
+      return (found)? index : false;
+    };
+
+    // Finds the closest valid parent with a certain content to the given position, working backwards
+    function state__findStartCodeOfType(queue, content, position) {
+      var found = false;
+      var index = -1;
+
+      for(var i = position - 1; i >= 0 && !found; i--) {
+        found = queue[i].type === BBCodeParser_Token.CODE_START &&
+                queue[i].status === BBCodeParser_Token.UNDETERMINED &&
+          queue[i].content === content;
+        index = i;
+      }
+
+      return (found)? index : false;
+    };
+
+    // Find the parent start-code of another code
+    function state__findParentStartCode(queue, position) {
+      var found = false;
+      var index = -1;
+
+      for(var i = position - 1; i >= 0 && !found; i--) {
+        found = queue[i].type === BBCodeParser_Token.CODE_START &&
+                queue[i].status === BBCodeParser_Token.VALID &&
+          queue[i].matches > position;
+        index = i;
+      }
+
+      return (found)? index : false;
+    };
+
+    // Removes the given value from an array (match found by reference)
+    function array_remove(stack, match, first) {
+      if(first === undefined) first = false;
+
+      found = false;
+      count = PHPC.count(stack);
+
+      for(i = 0; i < count && !found; i++) {
+        if(stack[i] === match) {
+          stack = stack.splice(stack, i, 1);
+
+          found = true && first;
+          count--;
+          i--;
+        }
+      }
+
+      return stack;
+    };
+
+  }
+  // Whether or not a key in an array is valid or not (is set, and is not null)
+  BBCodeParser.isValidKey = function(array, key) {
+    return array[key] !== undefined && array[key] !== null;
+  };
+
+
+  /*
+     A "multiple token" tokenizer.
+     This will not return the text between the last found token and the end of the string,
+     as no token will match "end of string". There is no special "end of string" token to
+     match against either, as with an arbitrary token to find, how does one know they are
+     "one from the end"?
+  */
+  function BBCodeParser_MultiTokenizer(input, position) {
+    var length = 0;
+
+    if(position === undefined) position = 0;
+    input = input + '';
+    length = input.length;
+    position = PHPC.intval(position);
+
+    this.hasNextToken = function(delimiter) {
+      if(delimiter === undefined) delimiter = ' ';
+      return input.indexOf(delimiter, Math.min(length, position)) !== -1;
+    }
+
+    this.nextToken = function(delimiter) {
+      if(delimiter === undefined) delimiter = ' ';
+
+      if(position >= length) {
+        return false;
+      }
+
+      var index = input.indexOf(delimiter, position);
+      if(index === -1) {
+        index = length;
+      }
+
+      var result = input.substr(position, index - position);
+      position = index + 1;
+
+      return result;
+    }
+
+    this.reset = function() {
+      position = false;
+    }
+
+  }
+
+  // Class representing a BB-Code-oriented token
+  function BBCodeParser_Token(type, content, argument) {
+
+    this.type = BBCodeParser_Token.NONE;
+    this.status = BBCodeParser_Token.UNDETERMINED;
+    this.content = '';
+    this.argument = null;
+    this.matches = null; // matching start/end code index
+
+    if(argument === undefined) argument = null;
+    this.type = type;
+    this.content = content;
+    this.status = (this.type === BBCodeParser_Token.CONTENT)? BBCodeParser_Token.VALID : BBCodeParser_Token.UNDETERMINED;
+    this.argument = argument;
+
+  }
+  BBCodeParser_Token.NONE = 'NONE';
+  BBCodeParser_Token.CODE_START = 'CODE_START';
+  BBCodeParser_Token.CODE_END = 'CODE_END';
+  BBCodeParser_Token.CONTENT = 'CONTENT';
+
+  BBCodeParser_Token.VALID = 'VALID';
+  BBCodeParser_Token.INVALID = 'INVALID';
+  BBCodeParser_Token.NOTALLOWED = 'NOTALLOWED';
+  BBCodeParser_Token.NOIMPLFOUND = 'NOIMPLFOUND';
+  BBCodeParser_Token.UNDETERMINED = 'UNDETERMINED';
+
+  function DefaultGlobalBBCode() {
+    this.getCodeName = function() { return 'GLOBAL'; }
+    this.getDisplayName = function() { return 'GLOBAL'; }
+    this.needsEnd = function() { return false; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return false; }
+    this.escape = function(settings, content) { return content; }
+    this.open = function(settings, argument, closingCode) { return ''; }
+    this.close = function(settings, argument, closingCode) { return ''; }
+  }
+  DefaultGlobalBBCode.prototype = new BBCode;
+
+    /************************/
+   /* HTML implementations */
+  /************************/
+
+  function HTMLGlobalBBCode() {
+    this.getCodeName = function() { return 'GLOBAL'; }
+    this.getDisplayName = function() { return 'GLOBAL'; }
+    this.needsEnd = function() { return false; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return false; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) { return ''; }
+    this.close = function(settings, argument, closingCode) { return ''; }
+  }
+  HTMLGlobalBBCode.prototype = new BBCode;
+
+  function HTMLBoldBBCode() {
+    this.getCodeName = function() { return 'Bold'; }
+    this.getDisplayName = function() { return 'b'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) { return '<b>'; }
+    this.close = function(settings, argument, closingCode) { return '</b>'; }
+  }
+  HTMLBoldBBCode.prototype = new BBCode;
+
+  function HTMLItalicBBCode() {
+    this.getCodeName = function() { return 'Italic'; }
+    this.getDisplayName = function() { return 'i'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) { return '<i>'; }
+    this.close = function(settings, argument, closingCode) { return '</i>'; }
+  }
+  HTMLItalicBBCode.prototype = new BBCode;
+
+  function HTMLUnderlineBBCode() {
+    this.getCodeName = function() { return 'Underline'; }
+    this.getDisplayName = function() { return 'u'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) { return '<u>'; }
+    this.close = function(settings, argument, closingCode) { return '</u>'; }
+  }
+  HTMLUnderlineBBCode.prototype = new BBCode;
+
+  function HTMLStrikeThroughBBCode() {
+    this.getCodeName = function() { return 'StrikeThrough'; }
+    this.getDisplayName = function() { return 's'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) { return '<s>'; }
+    this.close = function(settings, argument, closingCode) { return '</s>'; }
+  }
+  HTMLStrikeThroughBBCode.prototype = new BBCode;
+
+  function HTMLFontSizeBBCode() {
+    this.getCodeName = function() { return 'Font Size'; }
+    this.getDisplayName = function() { return 'size'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return true; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.isValidArgument = function(settings, argument) { return PHPC.intval(argument) > 0; }
+    this.isValidArgument = function(settings, argument) {
+      if(!BBCodeParser.isValidKey(settings, 'FontSizeMax') ||
+         (BBCodeParser.isValidKey(settings, 'FontSizeMax') && PHPC.intval(settings['FontSizeMax']) <= 0)) {
+        return PHPC.intval(argument) > 0;
+      }
+      return PHPC.intval(argument) > 0 && PHPC.intval(argument) <= PHPC.intval(settings['FontSizeMax']);
+    }
+    this.open = function(settings, argument, closingCode) { 
+      return '<span style="font-size: ' + PHPC.intval(argument) + PHPC.htmlspecialchars(settings['FontSizeUnit']) + '">';
+    }
+    this.close = function(settings, argument, closingCode) {
+      return '</span>';
+    }
+  }
+  HTMLFontSizeBBCode.prototype = new BBCode;
+
+  function HTMLColorBBCode() {
+    var browserColors = {'aliceblue':'1','antiquewhite':'1','aqua':'1','aquamarine':'1','azure':'1','beige':'1','bisque':'1','black':'1','blanchedalmond':'1','blue':'1','blueviolet':'1','brown':'1','burlywood':'1','cadetblue':'1','chartreuse':'1','chocolate':'1','coral':'1','cornflowerblue':'1','cornsilk':'1','crimson':'1','cyan':'1','darkblue':'1','darkcyan':'1','darkgoldenrod':'1','darkgray':'1','darkgreen':'1','darkkhaki':'1','darkmagenta':'1','darkolivegreen':'1','darkorange':'1','darkorchid':'1','darkred':'1','darksalmon':'1','darkseagreen':'1','darkslateblue':'1','darkslategray':'1','darkturquoise':'1','darkviolet':'1','deeppink':'1','deepskyblue':'1','dimgray':'1','dodgerblue':'1','firebrick':'1','floralwhite':'1','forestgreen':'1','fuchsia':'1','gainsboro':'1','ghostwhite':'1','gold':'1','goldenrod':'1','gray':'1','green':'1','greenyellow':'1','honeydew':'1','hotpink':'1','indianred':'1','indigo':'1','ivory':'1','khaki':'1','lavender':'1','lavenderblush':'1','lawngreen':'1','lemonchiffon':'1','lightblue':'1','lightcoral':'1','lightcyan':'1','lightgoldenrodyellow':'1','lightgrey':'1','lightgreen':'1','lightpink':'1','lightsalmon':'1','lightseagreen':'1','lightskyblue':'1','lightslategray':'1','lightsteelblue':'1','lightyellow':'1','lime':'1','limegreen':'1','linen':'1','magenta':'1','maroon':'1','mediumaquamarine':'1','mediumblue':'1','mediumorchid':'1','mediumpurple':'1','mediumseagreen':'1','mediumslateblue':'1','mediumspringgreen':'1','mediumturquoise':'1','mediumvioletred':'1','midnightblue':'1','mintcream':'1','mistyrose':'1','moccasin':'1','navajowhite':'1','navy':'1','oldlace':'1','olive':'1','olivedrab':'1','orange':'1','orangered':'1','orchid':'1','palegoldenrod':'1','palegreen':'1','paleturquoise':'1','palevioletred':'1','papayawhip':'1','peachpuff':'1','peru':'1','pink':'1','plum':'1','powderblue':'1','purple':'1','red':'1','rosybrown':'1','royalblue':'1','saddlebrown':'1','salmon':'1','sandybrown':'1','seagreen':'1','seashell':'1','sienna':'1','silver':'1','skyblue':'1','slateblue':'1','slategray':'1','snow':'1','springgreen':'1','steelblue':'1','tan':'1','teal':'1','thistle':'1','tomato':'1','turquoise':'1','violet':'1','wheat':'1','white':'1','whitesmoke':'1','yellow':'1','yellowgreen':'1'};
+    this.getCodeName = function() { return 'Color'; }
+    this.getDisplayName = function() { return 'color'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return true; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) {
+      if(argument === null || argument === undefined) return false;
+      if(BBCodeParser.isValidKey(browserColors, argument.toLowerCase()) ||
+         argument.match(/^#[\dabcdef]{3}$/i) != null ||
+         argument.match(/^#[\dabcdef]{6}$/i) != null) {
+        return true;
+      }
+      if(BBCodeParser.isValidKey(settings, 'ColorAllowAdvFormats') && settings['ColorAllowAdvFormats'] &&
+        (argument.match(/^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/i).length > 0 ||
+         argument.match(/^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*((0?\.\d+)|1|0)\s*\)$/i).length > 0 ||
+         argument.match(/^hsl\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}\s+%\)$/i).length > 0 ||
+         argument.match(/^hsla\(\s*\d{1,3}\s*,\s*\d{1,3}\s+%,\s*\d{1,3}\s+%,\s*((0?\.\d+)|1|0)\s*\)$/i).length > 0)) {
+        return true;
+      }
+      return false;
+    }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) { 
+      return '<span style="color: ' + PHPC.htmlspecialchars(argument) + '">';
+    }
+    this.close = function(settings, argument, closingCode) {
+      return '</span>';
+    }
+  }
+  HTMLColorBBCode.prototype = new BBCode;
+
+  function HTMLFontBBCode() {
+    this.getCodeName = function() { return 'Font'; }
+    this.getDisplayName = function() { return 'font'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return true; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return argument !== null; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) { 
+      return '<span style="font-family: \'' + PHPC.htmlspecialchars(argument) + '\'">';
+    }
+    this.close = function(settings, argument, closingCode) {
+      return '</span>';
+    }
+  }
+  HTMLFontBBCode.prototype = new BBCode;
+
+  function HTMLLeftBBCode() {
+    this.getCodeName = function() { return 'Left'; }
+    this.getDisplayName = function() { return 'left'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '<div style="display: block; text-align: left">' : '';
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '</div>' : '';
+    }
+  }
+  HTMLLeftBBCode.prototype = new BBCode;
+
+  function HTMLCenterBBCode() {
+    this.getCodeName = function() { return 'Center'; }
+    this.getDisplayName = function() { return 'center'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '<div style="display: block; text-align: center">' : '';
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '</div>' : '';
+    }
+  }
+  HTMLCenterBBCode.prototype = new BBCode;
+
+  function HTMLRightBBCode() {
+    this.getCodeName = function() { return 'Right'; }
+    this.getDisplayName = function() { return 'right'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '<div style="display: block; text-align: right">' : '';
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '</div>' : '';
+    }
+  }
+  HTMLRightBBCode.prototype = new BBCode;
+
+  function HTMLQuoteBBCode() {
+    this.getCodeName = function() { return 'Quote'; }
+    this.getDisplayName = function() { return 'quote'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return true; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      if(closingCode === null) {
+        var box  = '<div style="display: block; margin-bottom: .5em; border: ' + PHPC.htmlspecialchars(settings['QuoteBorder']) + '; background-color: ' + PHPC.htmlspecialchars(settings['QuoteBackground']) + '">';
+        box += '<div style="display: block; width: 100%; text-indent: .25em; border-bottom: ' + PHPC.htmlspecialchars(settings['QuoteBorder']) + '; background-color: ' + PHPC.htmlspecialchars(settings['QuoteTitleBackground']) + '">';
+        box += 'QUOTE';
+        if(argument) box+= ' by ' + PHPC.htmlspecialchars(argument);
+        box += '</div>';
+        box += '<div ';
+        if(argument) box += 'class="' + PHPC.htmlspecialchars(settings['QuoteCSSClassName'].replace('{by}', argument));
+        box += 'style="overflow-x: auto; padding: .25em">';
+        return box;
+      }
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '</div></div>' : '';
+    }
+  }
+  HTMLQuoteBBCode.prototype = new BBCode;
+
+  function HTMLCodeBBCode() {
+    this.getCodeName = function() { return 'Code'; }
+    this.getDisplayName = function() { return 'code'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return false; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return true; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      if(closingCode === null) {
+        var box  = '<div style="display: block; margin-bottom: .5em; border: ' + PHPC.htmlspecialchars(settings['CodeBorder']) + '; background-color: ' + PHPC.htmlspecialchars(settings['CodeBackground']) + '">';
+        box += '<div style="display: block; width: 100%; text-indent: .25em; border-bottom: ' + PHPC.htmlspecialchars(settings['CodeBorder']) + '; background-color: ' + PHPC.htmlspecialchars(settings['CodeTitleBackground']) + '">';
+        box += 'CODE';
+        if(argument) box+= ' (' + PHPC.htmlspecialchars(argument) + ')';
+        box += '</div><pre ';
+        if(argument) box += 'class="' + PHPC.htmlspecialchars(str_replace('{lang}', argument, settings['CodeCSSClassName'])) + '" ';
+        box += 'style="overflow-x: auto; margin: 0; font-family: monospace; white-space: pre-wrap; padding: .25em">';
+        return box;
+      }
+      return '';
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '</pre></div>' : '';
+    }
+  }
+  HTMLCodeBBCode.prototype = new BBCode;
+
+  function HTMLCodeBoxBBCode() {
+    this.getCodeName = function() { return 'Code Box'; }
+    this.getDisplayName = function() { return 'codebox'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return false; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return true; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      if(closingCode === null) {
+        var box  = '<div style="display: block; margin-bottom: .5em; border: ' + PHPC.htmlspecialchars(settings['CodeBorder']) + '; background-color: ' + PHPC.htmlspecialchars(settings['CodeBackground']) + '">';
+        box += '<div style="display: block; width: 100%; text-indent: .25em; border-bottom: ' + PHPC.htmlspecialchars(settings['CodeBorder']) + '; background-color: ' + PHPC.htmlspecialchars(settings['CodeTitleBackground']) + '">';
+        box += 'CODE';
+        if(argument) box+= ' (' + PHPC.htmlspecialchars(argument) + ')';
+        box += '</div><pre ';
+        if(argument) box += 'class="' + PHPC.htmlspecialchars(str_replace('{lang}', argument, settings['CodeCSSClassName'])) + '" ';
+        box += 'style="height: 29ex; overflow-y: auto; margin: 0; font-family: monospace; white-space: pre-wrap; padding: .25em">';
+        return box;
+      }
+      return '';
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '</pre></div>' : '';
+    }
+  }
+  HTMLCodeBoxBBCode.prototype = new BBCode;
+
+  function HTMLLinkBBCode() {
+    this.getCodeName = function() { return 'Link'; }
+    this.getDisplayName = function() { return 'url'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return true; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return true; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      var decoration = (!BBCodeParser.isValidKey(settings, 'LinkUnderline') || settings['LinkUnderline'])? 'underline' : 'none';
+      return '<a style="text-decoration: ' + decoration + '; color: ' + PHPC.htmlspecialchars(settings['LinkColor']) + '" href="' + PHPC.htmlspecialchars(argument) + '">';
+    }
+    this.close = function(settings, argument, closingCode) {
+      return '</a>';
+    }
+  }
+  HTMLLinkBBCode.prototype = new BBCode;
+
+  function HTMLImageBBCode() {
+    this.getCodeName = function() { return 'Image'; }
+    this.getDisplayName = function() { return 'img'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return false; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) {
+      if(argument === null || argument === undefined) return true;
+      var args = argument.split('x');
+      return PHPC.count(args) === 2 && PHPC.floatval(args[0]) === floor(PHPC.floatval(args[0])) && PHPC.floatval(args[1]) === floor(PHPC.floatval(args[1]));
+    }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '<img src="' : '';
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      if(closingCode === null) {
+        if(argument) {
+          var args = argument.split('x');
+          var width = PHPC.intval(args[0]);
+          var height = PHPC.intval(args[1]);
+
+          if(BBCodeParser.isValidKey(settings, 'ImageMaxWidth') && PHPC.intval(settings['ImageMaxWidth']) !== 0) {
+            width = Math.min(width, PHPC.intval(settings['ImageMaxWidth']));
+          }
+          if(BBCodeParser.isValidKey(settings, 'ImageMaxHeight') && PHPC.intval(settings['ImageMaxHeight']) !== 0) {
+            height = Math.min(height, PHPC.intval(settings['ImageMaxHeight']));
+          }
+          return '" alt="image" style="width: ' + width + '; height: ' + height + '"' + ((settings['XHTML'])? '/>' : '>');
+        }
+        return '" alt="image"' + ((settings['XHTML'])? '/>' : '>');
+      }
+      return '';
+    }
+  }
+  HTMLImageBBCode.prototype = new BBCode;
+
+  function HTMLUnorderedListBBCode() {
+    var types = {
+      'circle' : 'circle',
+      'disk'   : 'disk',
+      'square' : 'square'
+    };
+    this.getCodeName = function() { return 'Unordered List'; }
+    this.getDisplayName = function() { return 'ul'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) {
+      if(argument === null || argument === undefined) return true;
+      return BBCodeParser.isValidKey(types, argument);
+    }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      if(closingCode === null) {
+        var key = null;
+
+        if(BBCodeParser.isValidKey(types, argument)) key = types[argument];
+        if(!key && BBCodeParser.isValidKey(types, 'UnorderedListDefaultType') && BBCodeParser.isValidKey(types, 'UnorderedListDefaultType')) {
+          argument = types[settings['UnorderedListDefaultType']];
+        }
+        if(!key) argument = types['circle'];
+
+        return '<ul style="list-style-type: ' + PHPC.htmlspecialchars(key) + '">';
+      }
+      return '';
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '</ul>' : '';
+    }
+  }
+  HTMLUnorderedListBBCode.prototype = new BBCode;
+
+
+  function HTMLOrderedListBBCode() {
+    var types = {
+      '1'      : 'decimal',
+      'a'      : 'lower-alpha',
+      'A'      : 'upper-alpha',
+      'i'      : 'lower-roman',
+      'I'      : 'upper-roman'
+    };
+    this.getCodeName = function() { return 'Unordered List'; }
+    this.getDisplayName = function() { return 'ol'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) {
+      if(argument === null || argument === undefined) return true;
+      return BBCodeParser.isValidKey(types, argument);
+    }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      if(closingCode === null) {
+        var key = null;
+
+        if(BBCodeParser.isValidKey(types, argument)) key = types[argument];
+        if(!key && BBCodeParser.isValidKey(types, 'OrderedListDefaultType') && BBCodeParser.isValidKey(types, 'OrderedListDefaultType')) {
+          argument = types[settings['OrderedListDefaultType']];
+        }
+        if(!key) argument = types['1'];
+
+        return '<ol style="list-style-type: ' + PHPC.htmlspecialchars(key) + '">';
+      }
+      return '';
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      return (closingCode === null)? '</ol>' : '';
+    }
+  }
+  HTMLOrderedListBBCode.prototype = new BBCode;
+
+
+  function HTMLListItemBBCode() {
+    this.getCodeName = function() { return 'List Item'; }
+    this.getDisplayName = function() { return 'li'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) {
+      return parent === 'ul' || parent === 'ol';
+    }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) { return '<li>'; }
+    this.close = function(settings, argument, closingCode) { return '</li>'; }
+  }
+  HTMLListItemBBCode.prototype = new BBCode;
+
+  function HTMLListBBCode() {
+    var ul_types = {
+      'circle' : 'circle',
+      'disk'   : 'disk',
+      'square' : 'square'
+    };
+    var ol_types = {
+      '1'      : 'decimal',
+      'a'      : 'lower-alpha',
+      'A'      : 'upper-alpha',
+      'i'      : 'lower-roman',
+      'I'      : 'upper-roman'
+    };
+    this.getCodeName = function() { return 'List'; }
+    this.getDisplayName = function() { return 'list'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return true; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return null; }
+    this.getAutoCloseCodeOnClose = function() { return '*'; }
+    this.isValidArgument = function(settings, argument) {
+      if(argument === null || argument === undefined) return true;
+      return BBCodeParser.isValidKey(ol_types, argument) ||
+             BBCodeParser.isValidKey(ul_types, argument);
+    }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      if(closingCode === null) {
+        key = getType(settings, argument);
+        return '<' + ((BBCodeParser.isValidKey(ol_types, key))? 'ol' : 'ul') + ' style="list-style-type: ' + PHPC.htmlspecialchars(argument) + '">';
+      }
+      return '';
+    }
+    this.close = function(settings, argument, closingCode) {
+      if(closingCode === undefined) closingCode = null;
+      if(closingCode === null) {
+        var key = getType(settings, argument);
+        return '</' + ((BBCodeParser.isValidKey(ol_types, key))? 'ol' : 'ul') + '>';
+      }
+      return '';
+    }
+    function getType(settings, argument) {
+      var key = null;
+
+      if(BBCodeParser.isValidKey(ul_types, argument)) {
+        key = ul_types[argument];
+      }
+      if(!key && BBCodeParser.isValidKey(ol_types, argument)) {
+        key = ol_types[argument];
+      }
+      if(!key && BBCodeParser.isValidKey(ul_types, 'ListDefaultType')) {
+        key = ul_types[settings['ListDefaultType']];
+      }
+      if(!key && BBCodeParser.isValidKey(settings, 'ListDefaultType')) {
+        key = ol_types[settings['ListDefaultType']];
+      }
+      if(!key) key = ul_types['circle'];
+
+      return key;
+    }
+  }
+  HTMLListBBCode.prototype = new BBCode;
+
+  function HTMLStarBBCode() {
+    this.getCodeName = function() { return 'Star'; }
+    this.getDisplayName = function() { return '*'; }
+    this.needsEnd = function() { return true; }
+    this.canHaveCodeContent = function() { return true; }
+    this.canHaveArgument = function() { return false; }
+    this.mustHaveArgument = function() { return false; }
+    this.getAutoCloseCodeOnOpen = function() { return '*'; }
+    this.getAutoCloseCodeOnClose = function() { return null; }
+    this.isValidArgument = function(settings, argument) { return false; }
+    this.isValidParent = function(settings, parent) { return true; }
+    this.escape = function(settings, content) { return PHPC.htmlspecialchars(content); }
+    this.open = function(settings, argument, closingCode) { return '<li>'; }
+    this.close = function(settings, argument, closingCode) { return '</li>'; }
+  }
+  HTMLStarBBCode.prototype = new BBCode;

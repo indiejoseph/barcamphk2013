@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
-<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
-<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8" lang="en"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
@@ -57,6 +57,7 @@
                                             <li><a href="#wheres">Where and When</a></li>
                                             <li><a href="#schedule">Schedule</a></li>
                                             <li><a href="#organizers">Organizers</a></li>
+                                            <li id="nav-announce"><a data-toggle="modal" href="#announce-modal">Announcement</a></li>
                                             <li><a href="http://wall.barcamp.hk" target="_blank">Wall</a></li>
                                             <li class="lang"><a href="zh/">中文</a></li>
                                             <li id="reg"><a target="_blank" href="http://barcamphk2013.eventbrite.com/">Register</a></li>
@@ -238,9 +239,9 @@ gurteen.nsf/id/X004395C6/" target="_blank">Law of Two Feet</a>.</p>
                             </div>
                             <div class="span4">
                                 <div class="schedule-block">
-                                    <h4>MIXER</h4>
+                                    <h4>MIXER (Day 1 only, at <a href="http://www.hkcocoon.org/en/" target="_blank">CoCoon</a>)</h4>
                                     <div class="clear"><!-- Empty --></div>
-                                    <p>Because it’s not BarCamp without a bar, right?</p>
+                                    <p>Because it’s not BarCamp without a bar, right? Thanks to CoCoon for sponsoring!</p>
                                 </div>
                             </div>
                         </div>
@@ -336,6 +337,9 @@ photographers, event runners, etc. Email us on <a href="mailto:admin@barcamp.hk"
             <a rel="tooltips" data-placement="left" data-original-title="BarCamp Hong Kong 2013" href="http://www.barcamp.hk">
                 <img src="img/spacer2.gif" width="28" height="28" alt="BarCamp 2013 Hong Kong">
             </a>
+            <a rel="tooltips" data-placement="left" data-original-title="Announcement" class="announcement" data-toggle="modal" role="button" href="#announce-modal" id="announce-but">
+                <img src="img/spacer2.gif" width="28" height="28" alt="Announcement">
+            </a>
             <a rel="tooltips" data-placement="left" data-original-title="Follow us on Faceboook" class="facebook" href="http://www.facebook.com/BarCampHongKong" target="_blank">
                 <img src="img/spacer2.gif" width="28" height="28" alt="Follow us on Facebook">
             <a rel="tooltips" data-placement="left" data-original-title="Follow us on Twitter" class="twitter" href="http://www.twitter.com/barcamphk">
@@ -344,6 +348,15 @@ photographers, event runners, etc. Email us on <a href="mailto:admin@barcamp.hk"
             <a href="zh/" style="background-image:none;">
                 中
             </a>
+        </div>
+        <div class="modal hide fade" id="announce-modal">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="title">Announcement</h4>
+            </div>
+            <div class="modal-body">
+                <ul class="list"></ul>
+            </div>
         </div>
 
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
