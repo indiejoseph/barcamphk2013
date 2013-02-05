@@ -38,6 +38,11 @@ $(document).ready(function() {
 			}
 			var parser = new BBCodeParser();
 			var body = parser.format(result[i]);
+
+			if(i == 0) {
+				$("#announcement .content").html(body.substr(body.indexOf("<b>"), body.indexOf("</b>"))).delay(800).show("slow");
+			}
+
 			body = (body.length)?body.replace(/\r\n|\r|\n/g, "<br/>"): "";
 			list.append("<li>" + body + "</li>");
 		}

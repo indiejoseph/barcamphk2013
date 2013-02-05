@@ -20,6 +20,12 @@ body {
 }
 
 .touch {
+	#announcement {
+		display: none;
+	}
+	nav.affix {
+		margin-top: 0;
+	}
 	#cover {
 		background-attachment: scroll;
 		&>div {
@@ -316,6 +322,11 @@ body {
 		font-size: 14px;
 		margin-bottom: 12px;
 		line-height: 22px;
+		border-bottom: 1px solid #ccc;
+		padding-bottom: 12px;
+	}
+	img {
+		margin-bottom: 12px;
 	}
 }
 #sponsors {
@@ -400,6 +411,35 @@ h2 {
 	color: @mainColor;
 	background: none;
 	.box-shadow(none);
+}
+#announcement {
+	padding: 6px 12px;
+	font-size: 13px;
+	height: auto!important;
+	overflow: hidden;
+	white-space: nowrap;
+	color: #FFF;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 9990;
+	background: rgba(242, 101, 34, 0.95);
+	a {
+		color: #FFF;
+		text-decoration: underline;
+		display: block;
+	}
+	.btn {
+		.border-radius(32px);
+	}
+	img {
+		background: url(../img/follow_icons.png) 0 -83px no-repeat;
+		margin-right: 12px;
+	}
+	.content {
+
+	}
 }
 #desc {
 	background:	url(../img/cover2.jpg) 50% 0 no-repeat fixed;
