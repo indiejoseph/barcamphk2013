@@ -258,12 +258,15 @@ body {
 		text-decoration: underline;
 	}
 	.flag {
-		display: inline;
-		padding: 3px;
+		padding: 3px 6px;
 		font-size: 13px;
 		background: white;
 		color: @mainColor;
-		margin: 6px;
+		margin: 6px 6px 6px 0;
+		a {
+			color: @mainColor;
+			font-weight: bold;
+		}
 	}
 }
 .touch {
@@ -339,6 +342,25 @@ body {
 	.box-shadow(inset 0 1px 0px #FFF);
 	a {
 		font-weight: bold;
+	}
+	.sponsors-txt {
+		dt {
+			color: #777;
+			padding-top: 12px;
+			margin-bottom: 12px;
+		}
+	}
+	.sponsors-logos {
+		padding: 12px 26px;
+		background: rgba(255,255,255,0.8);
+		.border-radius(6px);
+		.box-shadow(~"inset 1px 1px 2px rgba(0,0,0,0.15), 1px 1px 0 rgba(255,255,255,0.75)");
+		border: 1px solid #ccc;
+		min-height: 120px;
+		text-align: center;
+		img {
+			margin: 6px 0;
+		}
 	}
 }
 #organizers {
@@ -605,6 +627,7 @@ nav {
 	footer {
 		display: none;
 	}
+
 }
 @media (max-width: 640px) {
 	#cover {
